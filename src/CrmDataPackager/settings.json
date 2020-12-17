@@ -1,0 +1,289 @@
+{
+  "entities": [
+    {
+      "entity": "annotation",
+      "fields": [
+        {
+          "field": "documentbody",
+          "extension": "auto",
+          "format": false
+        }
+      ]
+    },
+    {
+      "entity": "adx_ad",
+      "fields": [
+        {
+          "field": "adx_copy",
+          "extension": ".html",
+          "format": false
+        }
+      ]
+    },
+    {
+      "entity": "adx_contentsnippet",
+      "fields": [
+        {
+          "field": "adx_value",
+          "extension": "auto",
+          "format": false
+        }
+      ]
+    },
+    {
+      "entity": "adx_entityform",
+      "fields": [
+        {
+          "field": "adx_attachfilelabel",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_attachfiletypeerrormessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_instructions",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_recordnotfoundmessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_registerstartupscript",
+          "extension": ".js",
+          "format": false
+        },
+        {
+          "field": "adx_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_validationsummaryheadertext",
+          "extension": ".json",
+          "format": true
+        }
+      ]
+    },
+    {
+      "entity": "adx_entityformmetadata",
+      "fields": [
+        {
+          "field": "adx_description",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_instructions",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_label",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_notes_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_requiredfieldvalidationerrormessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_subgrid_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_timeline_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_validationregularexpressionerrormessage",
+          "extension": ".json",
+          "format": true
+        }
+      ]
+    },
+    {
+      "entity": "adx_entitylist",
+      "fields": [
+        {
+          "field": "adx_emptylisttext",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_filter_applybuttonlabel",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_filter_definition",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_registerstartupscript",
+          "extension": ".js",
+          "format": false
+        },
+        {
+          "field": "adx_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_views",
+          "extension": ".json",
+          "format": true
+        }
+      ]
+    },
+    {
+      "entity": "adx_webformmetadata",
+      "fields": [
+        {
+          "field": "adx_label",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_requiredfieldvalidationerrormessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_subgrid_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_timeline_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_validationerrormessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_validationregularexpressionerrormessage",
+          "extension": ".json",
+          "format": true
+        }
+      ]
+    },
+    {
+      "entity": "adx_webformstep",
+      "fields": [
+        {
+          "field": "adx_attachfilelabel",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_attachfiletypeerrormessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_instructions",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_nextbuttontext",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_registerstartupscript",
+          "extension": ".js",
+          "format": false
+        },
+        {
+          "field": "adx_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_submitbuttontext",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_successmessage",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_title",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_validationsummaryheadertext",
+          "extension": ".json",
+          "format": true
+        }
+      ]
+    },
+    {
+      "entity": "adx_weblinkset",
+      "fields": [
+        {
+          "field": "adx_copy",
+          "extension": ".html",
+          "format": false
+        }
+      ]
+    },
+    {
+      "entity": "adx_webpage",
+      "fields": [
+        {
+          "field": "adx_copy",
+          "extension": ".html",
+          "format": false
+        },
+        {
+          "field": "adx_customcss",
+          "extension": ".css",
+          "format": false
+        },
+        {
+          "field": "adx_customjavascript",
+          "extension": ".js",
+          "format": false
+        },
+        {
+          "field": "adx_summary",
+          "extension": ".html",
+          "format": false
+        }
+      ]
+    },
+    {
+      "entity": "adx_webtemplate",
+      "fields": [
+        {
+          "field": "adx_source",
+          "extension": ".html",
+          "format": false
+        }
+      ]
+    }
+  ]
+}
