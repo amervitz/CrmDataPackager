@@ -4,7 +4,7 @@
 RootModule = 'CrmDataPackager.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.1'
 
 # ID used to uniquely identify this module
 GUID = 'e580eeda-2a15-41f3-8e7a-5311653662c3'
@@ -55,7 +55,7 @@ PrivateData = @{
         ProjectUri = 'https://github.com/amervitz/CrmDataPackager'
 
         # Release notes of this module
-        ReleaseNotes = 'Initial release.'
+        ReleaseNotes = 'Fix for error `Unable to find type [Newtonsoft.Json.Linq.JToken]` when running Expand-CrmData.'
     } # End of PSData hashtable
 
 } # End of PrivateData hashtable

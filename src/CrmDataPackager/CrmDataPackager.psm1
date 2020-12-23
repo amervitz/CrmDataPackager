@@ -192,7 +192,9 @@ function CreateManifest {
 
     $formatted = [Newtonsoft.Json.Linq.JToken]::Parse($json).ToString()
 
-    Set-Content -Value $formatted -Path (Join-Path -Path $Path -ChildPath settings.json) -Encoding UTF8
+    $settingsPath = Join-Path -Path $Path -ChildPath settings.json
+    Write-Verbose "Writing file $settingsPath"
+    Set-Content -Value $formatted -Path $settingsPath -Encoding UTF8
 }
 
 function WriteFileAndUpdateRecord {
@@ -610,9 +612,9 @@ function CrmConfigurationPackager {
         Write-Verbose "Loading file $SettingsFile"
         $settings = ConvertFrom-Json (Get-Content -Raw -Path $SettingsFile)
 
-        CreateManifest -Path $DestinationPath -Settings $settings
         ExtractData -Path $dataPath -DestinationPath $DestinationPath -Settings $settings
         ExtractSchema -Path $schemaPath -DestinationPath $DestinationPath
+        CreateManifest -Path $DestinationPath -Settings $settings
     } elseif($Pack)  {
 
         # when target is a zip file, pack the contents to a temporary folder, then delete the temporary folder when done
