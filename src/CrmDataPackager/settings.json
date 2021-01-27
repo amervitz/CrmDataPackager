@@ -5,8 +5,7 @@
       "fields": [
         {
           "field": "documentbody",
-          "extension": "auto",
-          "format": false
+          "extension": "auto"
         }
       ]
     },
@@ -15,8 +14,7 @@
       "fields": [
         {
           "field": "adx_copy",
-          "extension": ".html",
-          "format": false
+          "extension": ".html"
         }
       ]
     },
@@ -25,8 +23,7 @@
       "fields": [
         {
           "field": "adx_value",
-          "extension": "auto",
-          "format": false
+          "extension": "auto"
         }
       ]
     },
@@ -55,8 +52,7 @@
         },
         {
           "field": "adx_registerstartupscript",
-          "extension": ".js",
-          "format": false
+          "extension": ".js"
         },
         {
           "field": "adx_settings",
@@ -135,8 +131,7 @@
         },
         {
           "field": "adx_registerstartupscript",
-          "extension": ".js",
-          "format": false
+          "extension": ".js"
         },
         {
           "field": "adx_settings",
@@ -210,8 +205,7 @@
         },
         {
           "field": "adx_registerstartupscript",
-          "extension": ".js",
-          "format": false
+          "extension": ".js"
         },
         {
           "field": "adx_settings",
@@ -245,8 +239,7 @@
       "fields": [
         {
           "field": "adx_copy",
-          "extension": ".html",
-          "format": false
+          "extension": ".html"
         }
       ]
     },
@@ -255,23 +248,19 @@
       "fields": [
         {
           "field": "adx_copy",
-          "extension": ".html",
-          "format": false
+          "extension": ".html"
         },
         {
           "field": "adx_customcss",
-          "extension": ".css",
-          "format": false
+          "extension": ".css"
         },
         {
           "field": "adx_customjavascript",
-          "extension": ".js",
-          "format": false
+          "extension": ".js"
         },
         {
           "field": "adx_summary",
-          "extension": ".html",
-          "format": false
+          "extension": ".html"
         }
       ]
     },
@@ -280,8 +269,7 @@
       "fields": [
         {
           "field": "adx_source",
-          "extension": ".html",
-          "format": false
+          "extension": ".html"
         }
       ]
     }
