@@ -4,7 +4,7 @@
 RootModule = 'CrmDataPackager.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.1'
+ModuleVersion = '2.0.0'
 
 # ID used to uniquely identify this module
 GUID = 'e580eeda-2a15-41f3-8e7a-5311653662c3'
@@ -55,7 +55,21 @@ PrivateData = @{
         ProjectUri = 'https://github.com/amervitz/CrmDataPackager'
 
         # Release notes of this module
-        ReleaseNotes = 'Fix for error `Unable to find type [Newtonsoft.Json.Linq.JToken]` when running Expand-CrmData.'
+        ReleaseNotes = '
+### 2.0.0
+New features:
+* Ability to name unpacked files based on a field value, e.g. the record name.
+
+BREAKING CHANGES:
+* Changes to the data format for storing file paths in unpacked files requires unpacked data created with prior versions to be packed with the same version prior to using this new version.
+
+### 1.0.1:
+Bug fixes:
+* Fix for error `Unable to find type [Newtonsoft.Json.Linq.JToken]` when running Expand-CrmData.
+
+### 1.0.0:
+* Initial release.
+'
     } # End of PSData hashtable
 
 } # End of PrivateData hashtable

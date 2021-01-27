@@ -135,16 +135,42 @@ function ExtractData {
         $entityFolder = New-Item -ItemType Directory -Path (Join-Path -Path $DestinationPath -ChildPath $entity.name)
         $recordsFolder = New-Item -ItemType Directory -Path (Join-Path -Path $entityFolder -ChildPath records)
 
-        $settingEntity = $settings.entities | Where-Object {$_.entity -eq $entity.name}
+        $settingsEntity = $settings.entities | Where-Object {$_.entity -eq $entity.name}
+
+        $entitySettings = LoadEntitySettings -Entity $entity -SettingsEntity $settingsEntity
 
         foreach($record in $entity.records.record) {
-            if($settingEntity) {
-                foreach($field in $settingEntity.fields) {
-                    WriteFileAndUpdateRecord -Entity $entity -RecordsFolder $recordsFolder -Record $record -EntityName $settingEntity.entity -FieldName $field.field -FileExtension $field.extension -Format:$field.format
+            if($settingsEntity) {
+                foreach($field in $settingsEntity.fields) {
+
+                    $fieldSettings = LoadFieldSettings -SettingsField $field
+
+                    if($fieldSettings.field) {
+                        WriteFileAndUpdateRecord -Entity $entity -RecordsFolder $recordsFolder -Record $record -FieldSettings $fieldSettings
+                    }
                 }
             }
 
-            $recordPath = Join-Path -Path $recordsFolder -ChildPath "$($record.id).xml"
+            $fileNamePrefix = $record.id
+            $fileExtension = $entitySettings.extension
+            $fileName = "$($fileNamePrefix)$($fileExtension)"
+            
+            if($entitySettings.fileNameField -ne "id") {
+                $fileNamePrefix = GetFileNamePrefix -FileNameField $fieldSettings.fileNameField -Record $Record 
+                $fileNamePrefix = EscapeFileName -FileName $fileNamePrefix
+                $fileName = "$($fileNamePrefix)$($fileExtension)"
+
+                $recordPath = Join-Path -Path $recordsFolder -ChildPath $fileName
+
+                if(Test-Path -Path $recordPath) {
+                    $existingFileName = $fileName
+                    $fileName = "$($record.id)$($fileExtension)"
+
+                    Write-Warning "Naming $($entity.name) file $fileName to avoid conflict with existing file $existingFileName"
+                }
+            }
+
+            $recordPath = Join-Path -Path $recordsFolder -ChildPath $fileName
 
             Write-Verbose "Writing file $recordPath"
             Set-Content -Path $recordPath -Value (Format-Xml -xml $record.OuterXml) -Encoding UTF8
@@ -209,57 +235,80 @@ function WriteFileAndUpdateRecord {
         $Record,
 
         [Parameter(Mandatory=$true)]
-        [string]$EntityName,
-
-        [Parameter(Mandatory=$true)]
-        [string]$FieldName,
-
-        [Parameter(Mandatory=$true)]
-        [string]$FileExtension,
-
-        [switch]$Format
+        [PSCustomObject]$FieldSettings
     )
 
-    $field = $Record.field | Where-Object {$_.name -eq $FieldName}
+    $field = $Record.field | Where-Object {$_.name -eq $FieldSettings.field}
+
     if($field) {
 
-        if($EntityName -eq 'annotation' -and $FieldName -eq 'documentbody' -and $FileExtension -eq 'auto') {
-            # unpack the documentbody field from annotations, by converting it from base 64 encoding and saving to the file system
-            $filenamefield = $record.field | Where-Object {$_.name -eq 'filename'}
-            $documentbody = [Convert]::FromBase64String($field.value)
-            $fileextension = [IO.Path]::GetExtension($filenamefield.value)
-            $documentbodyfilename = "$($record.id)$fileextension"
+        if($Entity.name -eq 'annotation' -and $FieldSettings.field -eq 'documentbody' -and $FieldSettings.extension -eq 'auto') {
+
             $documentbodyFolder = Join-Path -Path $recordsFolder -ChildPath 'documentbody'
-            $documentbodyPath = Join-Path -Path $documentbodyFolder -ChildPath $documentbodyfilename
             New-Item -ItemType Directory -Path $documentbodyFolder -ErrorAction SilentlyContinue | Out-Null
+            
+            # unpack the documentbody field from annotations, by converting it from base 64 encoding and saving to the file system
+            $annotationFileNameField = $record.field | Where-Object {$_.name -eq 'filename'}
+
+            $documentbody = [Convert]::FromBase64String($field.value)
+            
+            if($FieldSettings.fileNameField -ne "id") {
+                $documentbodyfilename = EscapeFileName -FileName $annotationFileNameField.value
+                $documentbodyPath = Join-Path -Path $documentbodyFolder -ChildPath $documentbodyfilename
+
+                if(Test-Path -Path $documentbodyPath) {
+                    $existingFileName = $documentbodyfilename
+                    $annotationFileExtension = [IO.Path]::GetExtension($annotationFileNameField.value)
+                    $documentbodyfilename = "$($record.id)$annotationFileExtension"
+
+                    Write-Warning "Naming $($Entity.name)\$($field.name) file $documentbodyfilename to avoid conflict with existing file $existingFileName"
+                }
+            } else {
+                $annotationFileExtension = [IO.Path]::GetExtension($annotationFileNameField.value)
+                $documentbodyfilename = "$($record.id)$annotationFileExtension"
+            }
+
+            $documentbodyPath = Join-Path -Path $documentbodyFolder -ChildPath $documentbodyfilename
+
             Write-Verbose "Writing file $documentbodyPath"
             [IO.File]::WriteAllBytes($documentbodyPath, $documentbody)
 
             # set the documentbody field value to the generated unpacked filename so the base 64 encoded text isn't written to disk and the file can be easily identified
+            $Field.RemoveAttribute("value")
             $path = [string](Join-Path -Path 'documentbody' -ChildPath $documentbodyfilename)
-            $md5 = GetBytesHashMD5 -Bytes $documentbody
-            $fileId = CreateFileId -Path $path -MD5 $md5
-            $field.SetAttribute("value", $fileId)
+            $field.SetAttribute("path", $path)
+            
+            if($FieldSettings.hash) {
+                $md5 = GetBytesHashMD5 -Bytes $documentbody
+                $field.SetAttribute("hash", $md5)
+            }
         } else {
-            if($EntityName -eq 'adx_contentsnippet' -and $FieldName -eq 'adx_value' -and $FileExtension -eq 'auto') {
+            if($Entity.name -eq 'adx_contentsnippet' -and $FieldSettings.field -eq 'adx_value' -and $FieldSettings.extension -eq 'auto') {
                 # determine if the type is text or html, set the file extension accordingly
                 $type = $record.field | Where-Object {$_.name -eq 'adx_type'}
-                $FileExtension = ".txt"
+                $FieldSettings.extension = ".txt"
                 if($type -and $type.value -eq "756150001") {
-                    $FileExtension = ".html"
+                    $FieldSettings.extension = ".html"
                 }
             }
 
-            $fileId = WriteTextFile -RecordsFolder $RecordsFolder -Record $Record -Field $field -FileExtension $FileExtension -Format:$Format
+            $fileInfo = WriteTextFile -EntityName $Entity.name -RecordsFolder $RecordsFolder -Record $Record -Field $field -FieldSettings $FieldSettings
 
             # set the field value to the unpacked filename and hash so the original text isn't written to disk and the file can be easily identified
-            $field.SetAttribute("value", $fileId)
+            $field.RemoveAttribute("value")
+            $field.SetAttribute("path", $fileInfo.path)
+
+            if($FieldSettings.hash) {
+                $field.SetAttribute("hash", $fileInfo.hash)
+            }
         }
     }
 }
 
 function WriteTextFile {
     param (
+        $EntityName,
+
         $RecordsFolder,
 
         [Parameter(Mandatory=$true)]
@@ -268,33 +317,105 @@ function WriteTextFile {
         [Parameter(Mandatory=$true)]
         $Field,
 
-        [Parameter()]
-        [string]$FileExtension,
-
-        [switch]$Format
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$FieldSettings
     )
     
     $value = [System.Web.HttpUtility]::HtmlDecode($Field.value)
 
-    if($FileExtension -eq '.json' -and $Format) {
+    $fileNamePrefix = GetFileNamePrefix -FileNameField $FieldSettings.fileNameField -Record $Record 
+
+    if($FieldSettings.fileNameField -ne "id") {
+        $fileNamePrefix = EscapeFileName -FileName $fileNamePrefix
+    }
+
+    if($FieldSettings.extension -eq '.json' -and $FieldSettings.format) {
         $value = [Newtonsoft.Json.Linq.JToken]::Parse($value).ToString()
     }
 
-    $filename = "$($record.id)$($FileExtension)"
+    $fileName = "$($fileNamePrefix)$($FieldSettings.extension)"
     $folder = Join-Path -Path $RecordsFolder -ChildPath $Field.name
-    $path = Join-Path -Path $folder -ChildPath $filename
+    $path = Join-Path -Path $folder -ChildPath $fileName
+
+    if($FieldSettings.fileNameField -ne "id" -and (Test-Path -Path $path)) {
+        $existingFileName = $fileName
+        $fileName = "$($record.id)$($FieldSettings.extension)"
+        $folder = Join-Path -Path $RecordsFolder -ChildPath $Field.name
+
+        Write-Warning "Naming $EntityName\$($Field.name) file $fileName to avoid conflict with existing file $existingFileName"
+
+        $path = Join-Path -Path $folder -ChildPath $fileName
+    }
 
     New-Item -ItemType Directory -Path $folder -ErrorAction SilentlyContinue | Out-Null
     Write-Verbose "Writing file $path"
     Set-Content -Path $path -Value $value -Encoding UTF8 -NoNewline
 
     # save the relative path to the new file so it can be easily identified in the original record
-    $relativePath = [string](Join-Path -Path $Field.name -ChildPath $filename)
+    $relativePath = [string](Join-Path -Path $Field.name -ChildPath $fileName)
 
     # save the hash so changes can be identified in the original record
-    $hash = GetTextHashMD5 -Text $value
+    if($FieldSettings.hash) {
+        $hash = GetTextHashMD5 -Text $value
 
-    return CreateFileId -Path $relativePath -MD5 $hash
+        return @{
+            path = $relativePath
+            hash = $hash
+        }
+    } else {
+        return @{
+            path = $relativePath
+            hash = ''
+        }
+    }
+}
+
+function EscapeFileName {
+    param (
+        [Parameter(Mandatory=$true)]
+        $FileName
+    )
+
+    $specialCharacters = '\', '/', ':', '*', '?', '"', '<', '>', '|', ` # windows reserved characters
+                         ','                                            # field value reserved characters
+    
+    $fileNameChars = $FileName.ToCharArray()
+
+    $fileNameSb = [System.Text.StringBuilder]::new()
+
+    for ($i = 0; $i -lt $fileNameChars.Length; $i++) { 
+        if($fileNameChars[$i] -cin $specialCharacters) {
+            $fileNameSb.Append([uri]::EscapeDataString($fileNameChars[$i])) | Out-Null
+        } else {
+            $fileNameSb.Append($fileNameChars[$i]) | Out-Null
+        }
+    }
+
+    $escaped = $fileNameSb.ToString()
+    return $escaped
+}
+
+function GetFileNamePrefix {
+    param (
+        [Parameter(Mandatory=$true)]
+        $Record,
+
+        [Parameter()]
+        [string]$FileNameField
+    )
+    
+    if($FileNameField -eq 'id') {
+        return $record.id
+    }
+
+    if($FileNameField) {
+        $field = $record.field | Where-Object {$_.name -eq $FileNameField}
+        if($field) {
+            return $field.value
+        }
+    }
+
+    return $record.id
 }
 
 function GetTextHashMD5 {
@@ -334,17 +455,11 @@ function PackData {
         [string]$Path,
 
         [Parameter(Mandatory=$true)]
-        [string]$DestinationPath
+        [string]$DestinationPath,
+
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$Settings
     )
-
-    $settingsFile = Join-Path -Path $Path -ChildPath settings.json
-    
-    if((Test-Path -Path $settingsFile) -eq $false) {
-        $settingsFile = Join-Path -Path $PSScriptRoot -ChildPath settings.json
-    }
-
-    Write-Verbose "Loading file $settingsFile"
-    $settings = ConvertFrom-Json (Get-Content -Raw -Path $SettingsFile)
 
     Write-Verbose "Loading assembly System.Web"
     Add-Type -AssemblyName System.Web
@@ -376,16 +491,20 @@ function PackData {
 
         $entity.AppendChild($recordsNode) | Out-Null
 
-        $settingEntity = $settings.entities | Where-Object {$_.entity -eq $entity.name}
+        $settingsEntity = $settings.entities | Where-Object {$_.entity -eq $entity.name}
+
+        $entitySettings = LoadEntitySettings -Entity $entity -SettingsEntity $settingsEntity
 
         # read the record xml for each CRM record from disk, and add it to the records element
         foreach($recordFile in $recordFiles) {
             Write-Verbose "Loading file $($recordFile.FullName)"
             $recordData = [xml](Get-Content -Path $recordFile.FullName -Encoding UTF8)
 
-            if($settingEntity) {
-                foreach($field in $settingEntity.fields) {
-                    LoadFileAndUpdateRecord -RecordsFolder $recordsFolder -Record $recordData.record -Entity $entity -EntityName $settingEntity.entity -FieldName $field.field -Extension $field.extension -Format:$field.format
+            if($settingsEntity) {
+                foreach($field in $settingsEntity.fields) {
+                    $fieldSettings = LoadFieldSettings -SettingsField $field
+
+                    LoadFileAndUpdateRecord -RecordsFolder $recordsFolder -Record $recordData.record -Entity $entity -FieldSettings $fieldSettings
                 }
             }
 
@@ -438,46 +557,52 @@ function LoadFileAndUpdateRecord {
 
         [Parameter(Mandatory=$true)]
         $Entity,
-
+        
         [Parameter(Mandatory=$true)]
-        [string]$EntityName,
-
-        [Parameter(Mandatory=$true)]
-        [string]$FieldName,
-
-        [string]$Extension,
-
-        [switch]$Format
+        $FieldSettings
     )
 
-    if($EntityName -eq 'annotation' -and $FieldName -eq 'documentbody' -and $Extension -eq 'auto') {
+    if($Entity.name -eq 'annotation' -and $FieldSettings.field -eq 'documentbody' -and $FieldSettings.extension -eq 'auto') {
         # pack the documentbody field from annotations, by converting it from binary to base 64 encoding
         $documentbodyfield = $recordData.record.field | Where-Object {$_.name -eq 'documentbody'}
 
         if($documentbodyfield) {
-            $relativePath = $documentbodyfield.value.Split(',')[0]
+            $relativePath = $documentbodyfield.path
             $documentbodypath = Join-Path -Path $recordsFolder -ChildPath $relativePath
             Write-Verbose "Loading file $documentbodypath"
+            
             $documentbodyBytes = Get-Content -Path $documentbodypath -Encoding Byte -Raw
             $documentbodybase64 = [Convert]::ToBase64String($documentbodyBytes)
-            $documentbodyfield.value = $documentbodybase64
+            $documentbodyfield.SetAttribute("value", $documentbodybase64)
+
+            $documentbodyfield.RemoveAttribute("path")
+
+            if($FieldSettings.hash) {
+                $documentbodyfield.RemoveAttribute("hash")
+            }
         }
     } else {
-        $field = $record.field | Where-Object {$_.name -eq $FieldName}
+        $field = $record.field | Where-Object {$_.name -eq $FieldSettings.field}
 
-        if($field -and $field.value.StartsWith($FieldName)) {
-            $relativePath = $field.value.Split(',')[0]
+        if($field) {
+            $relativePath = $field.path
             $filePath = Join-Path -Path $RecordsFolder -ChildPath $relativePath
             Write-Verbose "Loading file $filePath"
 
             $value = Get-Content -Path $filePath -Encoding UTF8 -Raw
 
-            if($relativePath.EndsWith(".json") -and $Format) {
+            if($relativePath.EndsWith(".json") -and $FieldSettings.format) {
                 $value = [Newtonsoft.Json.Linq.JToken]::Parse($value).ToString([Newtonsoft.Json.Formatting]::None)
             }
 
             $encoded = [System.Web.HttpUtility]::HtmlEncode($value)
             $field.SetAttribute("value", $encoded)
+            
+            $field.RemoveAttribute("path")
+
+            if($FieldSettings.hash) {
+                $field.RemoveAttribute("hash")
+            }
         }
     }
 }
@@ -608,14 +733,27 @@ function CrmConfigurationPackager {
         if(-not $SettingsFile) {
             $SettingsFile = Join-Path -Path $PSScriptRoot -ChildPath settings.json
         }
-    
+
         Write-Verbose "Loading file $SettingsFile"
-        $settings = ConvertFrom-Json (Get-Content -Raw -Path $SettingsFile)
+        $settings = LoadSettingsFile -Path $SettingsFile
 
         ExtractData -Path $dataPath -DestinationPath $DestinationPath -Settings $settings
         ExtractSchema -Path $schemaPath -DestinationPath $DestinationPath
         CreateManifest -Path $DestinationPath -Settings $settings
     } elseif($Pack)  {
+
+        $settingsPath = Join-Path -Path $Path -ChildPath "settings.json"
+
+        if((Test-Path -Path $settingsPath) -eq $false) {
+            Write-Error -Message "Could not find a settings.json file at $settingsPath. If the unpacked folder at $Path was created with Adoxio.Dynamics.DevOps, first run Compress-Data from Adoxio.Dynamics.DevOps on the unpacked folder to create the zip file, and then run Expand-Data with this version of CrmDataPackager to generate a compatible unpacked folder." -ErrorAction Stop
+        }
+
+        Write-Verbose "Loading file $settingsPath"
+        $settings = ConvertFrom-Json -InputObject (Get-Content -Path $settingsPath -Raw)
+
+        if($settings.version.StartsWith("1.0")) {
+            Write-Error -Message "The unpacked folder at $Path was created with an incompatible version of CrmConfigurationPackager ($($settings.version)). To use Expand-CrmData from this version of CrmConfigurationPackager ($($MyInvocation.MyCommand.Module.Version)), first run Compress-Data from CrmConfigurationPackager v1.0 on the unpacked folder to create the zip file, and then run Expand-Data with this version of CrmDataPackager to generate a compatible unpacked folder." -ErrorAction Stop
+        }
 
         # when target is a zip file, pack the contents to a temporary folder, then delete the temporary folder when done
         if([IO.Path]::GetExtension($DestinationPath) -eq '.zip') {
@@ -632,7 +770,7 @@ function CrmConfigurationPackager {
         PackSchema -Path $Path -DestinationPath $extractPath
 
         if(!$SchemaOnly) {
-            PackData -Path $Path -DestinationPath $extractPath
+            PackData -Path $Path -DestinationPath $extractPath -Settings $settings
             PackContentTypes -Path $Path -DestinationPath $extractPath
 
             # when target is a zip file, create the zip file, then delete the temporary folder
@@ -644,4 +782,87 @@ function CrmConfigurationPackager {
             }
         }
     }
+}
+
+function GetFileNameField {
+    param (
+        $DefaultFileNameField,
+        $EntityField
+    )
+
+    $fileNameField = if($EntityField -and 'fileNameField' -in $EntityField.PSObject.Properties.Name) { $EntityField.fileNameField } else { $DefaultFileNameField }
+
+    return $fileNameField
+}
+
+function LoadFieldSettings {
+    param (
+        $SettingsField
+    )
+
+    # the default settings for an entity
+    $fieldSettings = [PSCustomObject]@{
+        field = ""
+        fileNameField = "id"
+        extension = ".txt"
+        format = $false
+        hash = $true
+    }
+
+    if($Field) {
+        foreach($property in $Field.PSObject.Properties) {
+            if($property.Name -in $fieldSettings.PSObject.Properties.Name) {
+                $fieldSettings."$($property.Name)" = $property.Value
+            }
+        }
+    }
+
+    return $fieldSettings
+}
+
+function LoadEntitySettings {
+    param (
+        $Entity,
+        $SettingsEntity
+    )
+
+    # the default settings for an entity
+    $entitySettings = [PSCustomObject]@{
+        entity = $Entity.name
+        fileNameField = "id"
+        extension = ".xml"
+    }
+
+    if($SettingsEntity) {
+        # overwrite the default settings based on any matching provided values
+        foreach($property in $SettingsEntity.PSObject.Properties) {
+            if($property.Name -in $entitySettings.PSObject.Properties.Name) {
+                $entitySettings."$($property.Name)" = $property.Value
+            }
+        }
+    }
+
+    return $entitySettings
+}
+
+function LoadSettingsFile {
+    param (
+        $Path
+    )
+
+    # the default settings
+    $settings = [PSCustomObject]@{
+        entities = @()
+    }
+
+    $fileSettings = ConvertFrom-Json (Get-Content -Raw -Path $Path)
+
+    # overwrite the default settings based on any matching provided values
+    foreach($property in $settings.PSObject.Properties) {
+        if(Get-Member -InputObject $fileSettings -Name $property.Name) {
+            $settings."$($property.Name)" = $fileSettings."$($property.Name)"
+        }
+    }
+
+    return $settings
 }
