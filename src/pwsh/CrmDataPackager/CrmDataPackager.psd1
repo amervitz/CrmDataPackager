@@ -4,7 +4,7 @@
 RootModule = 'CrmDataPackager.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.0'
+ModuleVersion = '3.0.0'
 
 # ID used to uniquely identify this module
 GUID = 'e580eeda-2a15-41f3-8e7a-5311653662c3'
@@ -19,10 +19,10 @@ CompanyName = 'Alan Mervitz'
 Copyright = '(c) 2020 Alan Mervitz. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'CrmDataPackager provides functions for unpacking and packing Dynamics 365 configuration migration data.'
+Description = 'CrmDataPackager provides functions for unpacking and packing Dynamics 365 configuration migration tool data files.'
 
 # Minimum version of the Windows PowerShell engine required by this module
-PowerShellVersion = '5.0'
+PowerShellVersion = '5.1'
 
 # Minimum version of Microsoft .NET Framework required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
 DotNetFrameworkVersion = '4.6.1'
@@ -32,6 +32,10 @@ CLRVersion = '4.0'
 
 # Processor architecture (None, X86, Amd64) required by this module
 ProcessorArchitecture = 'None'
+
+RequiredAssemblies = @(
+    'CrmDataPackager.dll'
+)
 
 # Modules that must be imported into the global environment prior to importing this module
 RequiredModules = @(
@@ -56,6 +60,10 @@ PrivateData = @{
 
         # Release notes of this module
         ReleaseNotes = '
+### 3.0.0
+Other:
+* Ported a majority of the code from PowerShell to C#.
+
 ### 2.0.0
 New features:
 * Ability to name unpacked files based on a field value, e.g. the record name.

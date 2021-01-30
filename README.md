@@ -1,6 +1,6 @@
 # CrmDataPackager
 
-CrmDataPackager is a PowerShell module with functions for unpacking and packing Dynamics 365 configuration migration tool data files.
+CrmDataPackager is a PowerShell module with functions for extracting and packing Dynamics 365 configuration migration tool data .zip files.
 
 Read [Announcing the CrmDataPackager PowerShell module](https://alanmervitz.com/2020/12/20/announcing-crmdatapackager-powershell-module/) for an overview of this PowerShell module.
 
@@ -14,13 +14,14 @@ Install-Module -Name CrmDataPackager -Scope CurrentUser
 ## Functions
 
 A brief summary of each function is shown below. See the associated documentation for more details.
+
 ### [Expand-CrmData](/docs/functions/Expand-CrmData.md)
 
-Extracts a Configuration Migration tool generated zip file and unpacks the .xml files into separate files and folders.
+Extracts a Configuration Migration tool data .zip file and decomposes the contents into separate files and folders.
 
 ### [Compress-CrmData](/docs/functions/Compress-CrmData.md)
 
-Packs and zips a folder of Configuration Migration tool generated files previously created from `Expand-CrmData`.
+Packs a folder extracted with `Expand-CrmData` into a Configuration Migration tool data .zip file.
 
 ## Project Structure
 

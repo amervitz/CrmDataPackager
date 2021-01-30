@@ -1,7 +1,7 @@
 # Expand-CrmData
 
 ## Synopsis
-Extracts and unpacks a Configuration Migration tool generated data zip file to individual files.
+Extracts a Configuration Migration tool data .zip file and decomposes the contents into separate files and folders.
 
 ## Description
 This function extracts a Configuration Migration tool generated data zip file's contents into separate files and folders for each component.
@@ -30,7 +30,7 @@ Parameter | Type | Description | Required? | Default Value
 --------- | -----| ----------- | --------- | -------------
 ZipFile | string | The file path to the Configuration Migration tool generated data zip file. | true | |
 Folder | string | The folder path to create with the unpacked records. | true | |
-SettingsFile | string | The path to a settings file to specify entity fields to extract to files. | false | See [settings.json](/src/CrmDataPackager/settings.json) |
+[SettingsFile](/docs/Settings-File.md) | string | The path to a settings file to specify entity fields to extract to files. | false | See [settings.json](/src/CrmDataPackager/settings.json) |
 
 ## Examples
 
@@ -38,4 +38,11 @@ SettingsFile | string | The path to a settings file to specify entity fields to 
 This example extracts the data zip file exported from the AdventureWorks organization and unpacks the contents to the specified `-Folder`.
 ```powershell
 Expand-CrmData -ZipFile 'C:\temp\export\AdventureWorksData.zip' -Folder 'C:\temp\data\AdventureWorks'
+```
+
+## Example 2
+This example extracts the data zip file exported from the AdventureWorks organization, unpacks the contents to the specified -Folder, and unpacks the contents using the settings in the specified -[SettingsFile](/docs/Settings-File.md).
+
+```powershell
+Expand-CrmData -ZipFile 'C:\temp\export\AdventureWorksData.zip' -Folder 'C:\temp\data\AdventureWorks' -SettingsFile 'C:\temp\AdventureWorks.json'
 ```

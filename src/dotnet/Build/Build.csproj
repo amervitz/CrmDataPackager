@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrmDataPackager\CrmDataPackager.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="XCOPY &quot;$(ProjectDir)$(OutDir)CrmDataPackager.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Microsoft.Extensions.Logging.Abstractions.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Newtonsoft.Json.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y" />
+  </Target>
+
+</Project>
