@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Build": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\amervitz\\Downloads\\SubwayPortalData.zip\" \"D:\\temp\\data-1\""
+    }
+  }
+}

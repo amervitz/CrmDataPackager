@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrmDataPackager", "src\dotn
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Build", "src\dotnet\Build\Build.csproj", "{9E3050D8-E3FA-49AD-AF55-6AF2B1D55F74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YamlTests", "tests\YamlTests\YamlTests.csproj", "{C568F107-2031-4FF8-BFB2-C7ADF851B818}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{9E3050D8-E3FA-49AD-AF55-6AF2B1D55F74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E3050D8-E3FA-49AD-AF55-6AF2B1D55F74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E3050D8-E3FA-49AD-AF55-6AF2B1D55F74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C568F107-2031-4FF8-BFB2-C7ADF851B818}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C568F107-2031-4FF8-BFB2-C7ADF851B818}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C568F107-2031-4FF8-BFB2-C7ADF851B818}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C568F107-2031-4FF8-BFB2-C7ADF851B818}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

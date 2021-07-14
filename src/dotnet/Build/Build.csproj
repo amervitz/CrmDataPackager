@@ -2,15 +2,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CrmDataPackager\CrmDataPackager.csproj" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="XCOPY &quot;$(ProjectDir)$(OutDir)CrmDataPackager.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Microsoft.Extensions.Logging.Abstractions.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Newtonsoft.Json.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y" />
+    <Exec Command="XCOPY &quot;$(ProjectDir)$(OutDir)CrmDataPackager.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Microsoft.Extensions.Logging.Abstractions.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)Newtonsoft.Json.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y&#xD;&#xA;XCOPY &quot;$(ProjectDir)$(OutDir)YamlDotNet.dll&quot; &quot;$(SolutionDir)src\pwsh\CrmDataPackager\&quot; /S /Y" />
   </Target>
 
 </Project>

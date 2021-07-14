@@ -1,5 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CrmDataPackager.Extensions;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using System;
+using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -126,6 +132,8 @@ namespace CrmDataPackager
                     _logger.LogTrace($"Writing file {recordPath}");
 
                     File.WriteAllText(recordPath, FormatXml(record.OuterXml), Encoding.UTF8);
+
+                    var yaml = WriteYamlFile(record, recordPath);
                 }
 
                 var m2mrelationships = entity.SelectSingleNode("m2mrelationships");
@@ -158,6 +166,53 @@ namespace CrmDataPackager
             var targetDataPath = Path.Combine(targetFolderPath, "data.xml");
             File.WriteAllText(targetDataPath, FormatXml(rootData.OuterXml), Encoding.UTF8);
             return targetDataPath;
+        }
+
+        private SortedDictionary<string, object> CreateRecordDictionary(XmlNode record)
+        {
+            var attributes = new SortedDictionary<string, object>();
+            foreach (XmlAttribute attribute in record.Attributes)
+            {
+                attributes[attribute.Name] = attribute.GetRecordValue();
+            }
+
+            foreach(XmlNode fieldNode in record.ChildNodes)
+            {
+                if(fieldNode.Attributes.Count == 2)
+                {
+                    attributes[fieldNode.Attributes[0].Value] = fieldNode.Attributes[1].GetRecordValue();
+                }
+                else
+                {
+                    var fields = new Dictionary<string, object>();
+
+                    attributes[fieldNode.Attributes.GetNamedItem("name").Value] = fields;
+
+                    foreach(XmlAttribute attr in fieldNode.Attributes)
+                    {
+                        if(attr.Name != "name")
+                        {
+                            fields[attr.Name] = attr.GetRecordValue();
+                        }
+                    }
+                }
+            }
+
+            return attributes;
+        }
+
+        private string WriteYamlFile(XmlNode record, string recordPath)
+        {
+            var dictionary = CreateRecordDictionary(record);
+
+            var serializer = new YamlDotNet.Serialization.Serializer();
+            string yamlPath = recordPath.Replace(".xml", ".yaml");
+
+            _logger.LogTrace($"Writing file {yamlPath}");
+            string yaml = serializer.Serialize(dictionary);
+            File.WriteAllText(yamlPath, yaml, Encoding.UTF8);
+
+            return yaml;
         }
 
         private string CreateSettingsFile(string path, SettingsFile settingsFile)
@@ -207,7 +262,7 @@ namespace CrmDataPackager
         {
             var stringWriter = new StringWriter();
             var xmlWriter = new XmlTextWriter(stringWriter);
-            xmlWriter.Formatting = Formatting.Indented;
+            xmlWriter.Formatting = System.Xml.Formatting.Indented;
             xmlWriter.Indentation = indent;
             var xmlDocument = new XmlDocument();
             xmlDocument.LoadXml(xml);
@@ -271,7 +326,6 @@ namespace CrmDataPackager
                 field.RemoveAttribute("value");
                 var path = Path.Combine("documentbody", documentbodyfilename);
                 field.SetAttribute("path", path);
-
 
                 if (fieldSettings.Hash)
                 {
