@@ -154,6 +154,11 @@
           "format": true
         },
         {
+          "field": "adx_notes_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
           "field": "adx_requiredfieldvalidationerrormessage",
           "extension": ".json",
           "format": true
@@ -209,6 +214,11 @@
         },
         {
           "field": "adx_settings",
+          "extension": ".json",
+          "format": true
+        },
+        {
+          "field": "adx_submitbuttonbusytext",
           "extension": ".json",
           "format": true
         },
