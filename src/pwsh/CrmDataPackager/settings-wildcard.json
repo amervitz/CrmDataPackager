@@ -1,0 +1,27 @@
+﻿{
+  "version": "2.0.0",
+  "entities": [
+    {
+      "entity": "*",
+      "fileNameField": "primarynamefield",
+      "fieldsSortOrder": "ascending",
+      "fields": [
+        {
+            "field": "*",
+            "hash": false
+        }
+      ]
+    },
+    {
+      "entity": "annotation",
+      "fileNameField": "filename",
+      "fields": [
+        {
+          "field": "documentbody",
+          "fileNameField": "filename",
+          "extension": "auto"
+        }
+      ]
+    }
+  ]
+}

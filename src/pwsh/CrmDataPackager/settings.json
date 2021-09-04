@@ -1,4 +1,18 @@
 {
+  "defaults": {
+    "entity": "*",
+    "fileNameField": "primaryidfield",
+    "extension": ".xml",
+    "fields": [
+      {
+        "field":  "*",
+        "fileNameField": "primaryidfield",
+        "extension": ".txt",
+        "format": false,
+        "hash": true
+      }
+    ]
+  },
   "entities": [
     {
       "entity": "annotation",

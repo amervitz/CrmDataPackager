@@ -7,11 +7,13 @@ namespace CrmDataPackager
     {
         public string Entity { get; set; }
 
-        [DefaultValue("id")]
         public string FileNameField { get; set; }
 
-        [DefaultValue(".xml")]
-        public string Extension { get; set; }
+        public string FileNameSuffixField { get; set; }
+
+        public string Extension { get; set; } = ".xml";
+
+        public FieldsSortOrder? FieldsSortOrder { get; set; }
 
         public List<FieldSettings> Fields { get; set; } = new List<FieldSettings>();
 
@@ -22,8 +24,22 @@ namespace CrmDataPackager
         public EntitySettings(string entity)
         {
             Entity = entity;
-            FileNameField = "id";
-            Extension = ".xml";
+        }
+
+        public EntitySettings Clone()
+        {
+            return (EntitySettings)MemberwiseClone();
+        }
+
+        public void Inherit(EntitySettings settings)
+        {
+            if(settings != null)
+            {
+                FileNameField = FileNameField ?? settings.FileNameField;
+                FileNameSuffixField = FileNameSuffixField ?? settings.FileNameSuffixField;
+                Extension = Extension ?? settings.Extension;
+                FieldsSortOrder = FieldsSortOrder ?? settings.FieldsSortOrder;
+            }
         }
     }
 }

@@ -191,7 +191,7 @@ namespace CrmDataPackager
 
                         var value = File.ReadAllText(filePath, Encoding.UTF8);
 
-                        if (relativePath.EndsWith(".json") && fieldSettings.Format)
+                        if (relativePath.EndsWith(".json") && fieldSettings.Format.GetValueOrDefault())
                         {
                             value = JToken.Parse(value).ToString(Newtonsoft.Json.Formatting.None);
                         }

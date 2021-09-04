@@ -31,9 +31,9 @@ namespace CrmDataPackager
                 CopyFolder(FilePath, targetPath);
             }
 
-            var packager = new CrmDataFileExtractor(_logger);
-            var crmDataFolder = packager.Extract(targetPath, settingsFilePath);
-            return crmDataFolder;
+            var extractor = new CrmDataFileExtractor(_logger);
+            var folder = extractor.Extract(targetPath, settingsFilePath);
+            return folder;
         }
 
         private void ExtractArchive(string sourceArchiveFileName, string destinationDirectoryName)

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -67,75 +68,83 @@ namespace CrmDataPackager
 
         private string ExtractData(string targetFolderPath, SettingsFile settingsFile)
         {
-            var dataPath = Path.Combine(targetFolderPath, "data.xml");
-            var xml = new XmlDocument();
-            xml.Load(dataPath);
+            var dataXml = new DataXml(targetFolderPath, "data.xml");
+            var schemaXml = new SchemaXml(targetFolderPath, "data_schema.xml");
 
-            foreach (XmlElement entity in xml.SelectNodes("entities/entity"))
+            foreach (var entityData in dataXml.GetEntities())
             {
-                var entityName = entity.GetAttribute("name");
-                _logger.LogDebug($"Processing entity {entityName}");
-                var entityFolder = Path.Combine(targetFolderPath, entityName);
-                Directory.CreateDirectory(entityFolder);
+                _logger.LogDebug($"Processing entity {entityData.Name}");
 
-                var recordsFolder = Directory.CreateDirectory(Path.Combine(entityFolder, "records"));
+                var entityFolder = entityData.CreateEntityFolder(targetFolderPath);
+                var recordsFolder = entityData.CreateRecordsFolder(entityFolder);
 
-                var entitySettings = settingsFile.Entities.FirstOrDefault(e => e.Entity == entityName);
+                var entitySettings = settingsFile.GetEntitySettingsOrDefault(entityData.Name);
 
-                if (entitySettings is null)
+                var entitySchema = schemaXml.GetEntity(entityData.Name);
+
+                foreach (var record in entityData.GetRecords())
                 {
-                    entitySettings = new EntitySettings(entityName);
-                }
+                    _logger.LogDebug($"Processing record {record.Id}");
 
-                foreach (XmlElement record in entity.SelectNodes("records/record"))
-                {
-                    _logger.LogDebug($"Processing record {record.GetAttribute("id")}");
-
-                    foreach (var field in entitySettings.Fields)
+                    // process each field
+                    foreach (var fieldData in record.GetFields())
                     {
-                        if (field.Field != null)
+                        var fieldSettings = settingsFile.GetFieldSettingsOrDefault(entityData.Name, fieldData.Name);
+
+                        if (fieldSettings.Remove.GetValueOrDefault())
                         {
-                            _logger.LogDebug($"Processing field {field.Field}");
-                            WriteFileAndUpdateRecord(entity, recordsFolder, record, field);
+                            record.RemoveField(fieldData);
+                            continue;
+                        }
+
+                        if (fieldData.FieldType == FieldType.Lookup && fieldSettings.RemoveLookupEntityName.GetValueOrDefault())
+                        {
+                            _logger.LogDebug($"Removing lookupentityname attribute from field {fieldData.Name}");
+                            fieldData.RemoveLookupEntityName();
+                        }
+
+                        if(fieldSettings.FileNameField != null)
+                        {
+                            WriteFileAndUpdateRecord(entityData.XmlElement, entitySchema, recordsFolder, record.XmlElement, fieldSettings);
                         }
                     }
 
-                    string fileNamePrefix = record.GetAttribute("id");
-                    string fileExtension = entitySettings.Extension;
-                    string fileName = $"{fileNamePrefix}{fileExtension}";
-                    string recordPath = null;
-                    if (entitySettings.FileNameField != "id")
+                    var fileNameField = GetFileNameField(entitySchema, entitySettings.FileNameField);
+                    var fileNamePrefix = GetFileNamePrefix(record.XmlElement, fileNameField); ;
+                    var escapedFileNamePrefix = EscapeFileName(fileNamePrefix);
+                    var fileExtension = entitySettings.Extension;
+                    var fileName = $"{escapedFileNamePrefix}{fileExtension}";
+
+                    var recordPath = Path.Combine(recordsFolder.FullName, fileName);
+
+                    if (File.Exists(recordPath))
                     {
-                        fileNamePrefix = GetFileNamePrefix(record, entitySettings.FileNameField);
-                        fileNamePrefix = EscapeFileName(fileNamePrefix);
-                        fileName = $"{fileNamePrefix}{fileExtension}";
+                        var existingFileName = fileName;
+                        fileName = $"{escapedFileNamePrefix} {record.Id}{fileExtension}";
 
-                        recordPath = Path.Combine(recordsFolder.FullName, fileName);
-
-                        if (File.Exists(recordPath))
-                        {
-                            string existingFileName = fileName;
-                            fileName = "$($record.id)$($fileExtension)";
-
-                            _logger.LogWarning($"Naming {entity.GetAttribute("name")} file {fileName} to avoid conflict with existing file {existingFileName}");
-                        }
+                        _logger.LogWarning($"Naming {entityData.Name} file {fileName} to avoid conflict with existing file {existingFileName}");
                     }
 
                     recordPath = Path.Combine(recordsFolder.FullName, fileName);
 
                     _logger.LogTrace($"Writing file {recordPath}");
 
-                    File.WriteAllText(recordPath, FormatXml(record.OuterXml), Encoding.UTF8);
+                    if (entitySettings.FieldsSortOrder.GetValueOrDefault() != FieldsSortOrder.None)
+                    {
+                        record.SortFields(entitySettings.FieldsSortOrder.Value);
+                    }
+
+                    File.WriteAllText(recordPath, FormatXml(record.XmlElement.OuterXml), Encoding.UTF8);
                 }
 
-                var m2mrelationships = entity.SelectSingleNode("m2mrelationships");
+                var m2mrelationships = entityData.XmlElement.SelectSingleNode("m2mrelationships");
                 if (m2mrelationships != null && m2mrelationships.HasChildNodes)
                 {
-                    var m2mrelationshipsPath = Path.Combine(entityFolder, "m2mrelationships");
+                    var m2mrelationshipsPath = Path.Combine(entityFolder.FullName, "m2mrelationships");
                     _logger.LogTrace($"Creating folder {m2mrelationshipsPath}");
                     var m2mrelationshipsFolder = Directory.CreateDirectory(m2mrelationshipsPath);
 
-                    foreach (XmlElement m2mrelationship in entity.SelectNodes("m2mrelationships/m2mrelationship"))
+                    foreach (XmlElement m2mrelationship in entityData.XmlElement.SelectNodes("m2mrelationships/m2mrelationship"))
                     {
                         var m2mrelationshipnamePath = Path.Combine(m2mrelationshipsFolder.FullName, m2mrelationship.GetAttribute("m2mrelationshipname"));
                         var m2mrelationshipnameFolder = new DirectoryInfo(m2mrelationshipnamePath);
@@ -152,7 +161,7 @@ namespace CrmDataPackager
                 }
             }
 
-            var rootData = CreateRootSchema(xml, targetFolderPath);
+            var rootData = CreateRootSchema(dataXml.XmlDocument, targetFolderPath);
 
             // write back the condensed version of the data.xml file to the root of the folder
             var targetDataPath = Path.Combine(targetFolderPath, "data.xml");
@@ -173,7 +182,7 @@ namespace CrmDataPackager
 
         private XmlDocument CreateRootSchema(XmlDocument xml, string dataPath)
         {
-            XmlDocument rootSchema = xml.CloneNode(true) as XmlDocument;
+            var rootSchema = xml.CloneNode(true) as XmlDocument;
 
             foreach (XmlElement entity in rootSchema.SelectNodes("entities/entity"))
             {
@@ -217,7 +226,7 @@ namespace CrmDataPackager
             return stringWriter.ToString();
         }
 
-        public void WriteFileAndUpdateRecord(XmlElement entity, DirectoryInfo recordsFolder, XmlElement record, FieldSettings fieldSettings)
+        public void WriteFileAndUpdateRecord(XmlElement entity, XmlElement entitySchema, DirectoryInfo recordsFolder, XmlElement record, FieldSettings fieldSettings)
         {
             var field = record.SelectSingleNode($"field[@name='{fieldSettings.Field}']") as XmlElement;
 
@@ -232,7 +241,6 @@ namespace CrmDataPackager
 
             if (entity.GetAttribute("name") == "annotation" && fieldSettings.Field == "documentbody" && fieldSettings.Extension == "auto")
             {
-
                 var documentbodyFolder = Path.Combine(recordsFolder.FullName, "documentbody");
                 Directory.CreateDirectory(documentbodyFolder);
 
@@ -251,7 +259,7 @@ namespace CrmDataPackager
                     {
                         var existingFileName = documentbodyfilename;
                         var annotationFileExtension = Path.GetExtension(documentbodyfilename);
-                        documentbodyfilename = $"{record.GetAttribute("id")}{annotationFileExtension}";
+                        documentbodyfilename = $"{documentbodyfilename} {record.GetAttribute("id")}{annotationFileExtension}";
 
                         _logger.LogWarning($"Naming {entity.GetAttribute("name")}\\{field.GetAttribute("name")} file {documentbodyfilename} to avoid conflict with existing file {existingFileName}");
                     }
@@ -273,7 +281,7 @@ namespace CrmDataPackager
                 field.SetAttribute("path", path);
 
 
-                if (fieldSettings.Hash)
+                if (fieldSettings.Hash.GetValueOrDefault())
                 {
                     var md5 = GetBytesHashMD5(documentbody);
                     field.SetAttribute("hash", md5);
@@ -293,43 +301,52 @@ namespace CrmDataPackager
                     }
                 }
 
-                var fileInfo = WriteTextFile(recordsFolder, record, field, fieldSettings);
+                var fileInfo = WriteTextFile(recordsFolder, record, field, fieldSettings, entitySchema);
 
-                // set the field value to the unpacked filename and hash so the original text isn't written to disk and the file can be easily identified
-                field.RemoveAttribute("value");
-                field.SetAttribute("path", fileInfo.Path);
-
-                if (fieldSettings.Hash)
+                if(fileInfo.Path != "")
                 {
+                    // remove the value and set the path so the original text isn't written to back to the record
+                    field.RemoveAttribute("value");
+                    field.SetAttribute("path", fileInfo.Path);
+                }
+
+                if (fieldSettings.Hash.GetValueOrDefault() && fileInfo.Hash != "")
+                {
+                    // set the unpacked hash so the file can be easily identified
                     field.SetAttribute("hash", fileInfo.Hash);
                 }
             }
         }
 
-        private (string Path, string Hash) WriteTextFile(DirectoryInfo recordsFolder, XmlElement record, XmlElement field, FieldSettings fieldSettings)
+        private (string Path, string Hash) WriteTextFile(DirectoryInfo recordsFolder, XmlElement record, XmlElement field, FieldSettings fieldSettings, XmlElement entitySchema)
         {
-            string value = WebUtility.HtmlDecode(field.GetAttribute("value"));
+            // todo: make a config setting
+            var htmlDecode = true;
 
-            string fileNamePrefix = GetFileNamePrefix(record, fieldSettings.FileNameField);
+            var value = htmlDecode? WebUtility.HtmlDecode(field.GetAttribute("value")) : field.GetAttribute("value");
+
+            var fileNameField = GetFileNameField(entitySchema, fieldSettings.FileNameField);
+
+            var fileNamePrefix = GetFileNamePrefix(record, fileNameField);
 
             if (fieldSettings.FileNameField != "id")
             {
                 fileNamePrefix = EscapeFileName(fileNamePrefix);
             }
 
-            if (fieldSettings.Extension == ".json" && fieldSettings.Format)
+            if (fieldSettings.Extension == ".json" && fieldSettings.Format.GetValueOrDefault())
             {
                 value = Newtonsoft.Json.Linq.JToken.Parse(value).ToString();
             }
 
-            string fileName = $"{fileNamePrefix}{fieldSettings.Extension}";
-            string folder = Path.Combine(recordsFolder.FullName, field.GetAttribute("name"));
-            string path = Path.Combine(folder, fileName);
+            var fileName = $"{fileNamePrefix}{fieldSettings.Extension}";
+            var folder = Path.Combine(recordsFolder.FullName, field.GetAttribute("name"));
+            var path = Path.Combine(folder, fileName);
 
             if (fieldSettings.FileNameField != "id" && File.Exists(path))
             {
-                string existingFileName = fileName;
-                fileName = $"{record.GetAttribute("id")}{fieldSettings.Extension}";
+                var existingFileName = fileName;
+                fileName = $"{fileNamePrefix} {record.GetAttribute("id")}{fieldSettings.Extension}";
                 folder = Path.Combine(recordsFolder.FullName, field.GetAttribute("name"));
 
                 _logger.LogWarning($"Naming {folder} file {fileName} to avoid conflict with existing file {existingFileName}");
@@ -341,21 +358,43 @@ namespace CrmDataPackager
             _logger.LogTrace($"Writing file {path}");
             File.WriteAllText(path, value, Encoding.UTF8);
 
-            // save the relative path to the new file so it can be easily identified in the original record
-            string relativePath = Path.Combine(field.GetAttribute("name"), fileName);
-
-            // save the hash so changes can be identified in the original record
-            if (fieldSettings.Hash)
+            if(fileNameField != field.GetAttribute("name"))
             {
-                string hash = GetTextHashMD5(value);
+                // save the new file's relative path to the field so it can be found via the original record
+                var relativePath = Path.Combine(field.GetAttribute("name"), fileName);
 
-                return (relativePath, hash);
+                // save the new file's hash to the field so changes can be identified via the original record
+                if (fieldSettings.Hash.GetValueOrDefault())
+                {
+                    var hash = GetTextHashMD5(value);
 
+                    return (relativePath, hash);
+                }
+                else
+                {
+                    return (relativePath, "");
+
+                }
             }
             else
             {
-                return (relativePath, "");
+                return ("", "");
+            }
+        }
 
+        private string GetFileNameField(XmlElement entitySchema, string fileNameField)
+        {
+            if (fileNameField == "primaryidfield")
+            {
+                return entitySchema.GetAttribute("primaryidfield");
+            }
+            else if (fileNameField == "primarynamefield")
+            {
+                return entitySchema.GetAttribute("primarynamefield");
+            }
+            else
+            {
+                return fileNameField;
             }
         }
 
@@ -365,7 +404,7 @@ namespace CrmDataPackager
             {
                 return record.GetAttribute("id");
             }
-
+            
             if (fileNameField != null)
             {
                 if (record.SelectSingleNode($"field[@name='{fileNameField}']") is XmlElement field)
@@ -408,7 +447,7 @@ namespace CrmDataPackager
 
             var hash = new StringBuilder();
 
-            for (int i = 0; i < hashBytes.Length; i++)
+            for (var i = 0; i < hashBytes.Length; i++)
             {
                 hash.Append(hashBytes[i].ToString("X2"));
             }
@@ -418,8 +457,8 @@ namespace CrmDataPackager
 
         private string GetTextHashMD5(string text)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(text);
-            string hash = GetBytesHashMD5(bytes);
+            var bytes = Encoding.UTF8.GetBytes(text);
+            var hash = GetBytesHashMD5(bytes);
             return hash;
         }
     }
