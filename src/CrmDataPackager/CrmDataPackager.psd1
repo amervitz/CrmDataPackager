@@ -4,7 +4,7 @@
 RootModule = 'CrmDataPackager.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.0'
+ModuleVersion = '2.0.1'
 
 # ID used to uniquely identify this module
 GUID = 'e580eeda-2a15-41f3-8e7a-5311653662c3'
@@ -56,6 +56,13 @@ PrivateData = @{
 
         # Release notes of this module
         ReleaseNotes = '
+### 2.0.1
+New features:
+* adjusted folder structure to contain a single folder per record with all supporting attribute files contained as child files.
+
+BREAKING CHANGES:
+* Changes to the data format for storing file paths in unpacked files requires unpacked data created with prior versions to be packed with the same version prior to using this new version.
+
 ### 2.0.0
 New features:
 * Ability to name unpacked files based on a field value, e.g. the record name.
