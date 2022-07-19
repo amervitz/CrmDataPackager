@@ -133,13 +133,14 @@ function ExtractData {
 
     foreach($entity in $xml.entities.entity) {
         $entityFolder = New-Item -ItemType Directory -Path (Join-Path -Path $DestinationPath -ChildPath $entity.name)
-        $recordsFolder = New-Item -ItemType Directory -Path (Join-Path -Path $entityFolder -ChildPath records)
-
         $settingsEntity = $settings.entities | Where-Object {$_.entity -eq $entity.name}
 
         $entitySettings = LoadEntitySettings -Entity $entity -SettingsEntity $settingsEntity
 
         foreach($record in $entity.records.record) {
+            $entityRecordFolder = New-Item -ItemType Directory -Path (Join-Path -Path $entityFolder -ChildPath $record.id)
+            $recordsFolder = $entityRecordFolder
+
             if($settingsEntity) {
                 foreach($field in $settingsEntity.fields) {
 
@@ -150,7 +151,7 @@ function ExtractData {
                     }
                 }
             }
-
+            
             $fileNamePrefix = $record.id
             $fileExtension = $entitySettings.extension
             $fileName = "$($fileNamePrefix)$($fileExtension)"
@@ -244,9 +245,7 @@ function WriteFileAndUpdateRecord {
 
         if($Entity.name -eq 'annotation' -and $FieldSettings.field -eq 'documentbody' -and $FieldSettings.extension -eq 'auto') {
 
-            $documentbodyFolder = Join-Path -Path $recordsFolder -ChildPath 'documentbody'
-            New-Item -ItemType Directory -Path $documentbodyFolder -ErrorAction SilentlyContinue | Out-Null
-            
+            $documentbodyFolder = $recordsFolder 
             # unpack the documentbody field from annotations, by converting it from base 64 encoding and saving to the file system
             $annotationFileNameField = $record.field | Where-Object {$_.name -eq 'filename'}
 
@@ -265,7 +264,7 @@ function WriteFileAndUpdateRecord {
                 }
             } else {
                 $annotationFileExtension = [IO.Path]::GetExtension($annotationFileNameField.value)
-                $documentbodyfilename = "$($record.id)$annotationFileExtension"
+                $documentbodyfilename = "documentbody$annotationFileExtension"
             }
 
             $documentbodyPath = Join-Path -Path $documentbodyFolder -ChildPath $documentbodyfilename
@@ -275,9 +274,7 @@ function WriteFileAndUpdateRecord {
 
             # set the documentbody field value to the generated unpacked filename so the base 64 encoded text isn't written to disk and the file can be easily identified
             $Field.RemoveAttribute("value")
-            $path = [string](Join-Path -Path 'documentbody' -ChildPath $documentbodyfilename)
-            $field.SetAttribute("path", $path)
-            
+            $field.SetAttribute("path", $documentbodyfilename)
             if($FieldSettings.hash) {
                 $md5 = GetBytesHashMD5 -Bytes $documentbody
                 $field.SetAttribute("hash", $md5)
@@ -333,9 +330,9 @@ function WriteTextFile {
         $value = [Newtonsoft.Json.Linq.JToken]::Parse($value).ToString()
     }
 
-    $fileName = "$($fileNamePrefix)$($FieldSettings.extension)"
+    $fileName = "$($Field.name)$($FieldSettings.extension)"
     $folder = Join-Path -Path $RecordsFolder -ChildPath $Field.name
-    $path = Join-Path -Path $folder -ChildPath $fileName
+    $path = Join-Path -Path $RecordsFolder -ChildPath $fileName
 
     if($FieldSettings.fileNameField -ne "id" -and (Test-Path -Path $path)) {
         $existingFileName = $fileName
@@ -347,12 +344,11 @@ function WriteTextFile {
         $path = Join-Path -Path $folder -ChildPath $fileName
     }
 
-    New-Item -ItemType Directory -Path $folder -ErrorAction SilentlyContinue | Out-Null
     Write-Verbose "Writing file $path"
     Set-Content -Path $path -Value $value -Encoding UTF8 -NoNewline
 
     # save the relative path to the new file so it can be easily identified in the original record
-    $relativePath = [string](Join-Path -Path $Field.name -ChildPath $fileName)
+    $relativePath = [string]($fileName)
 
     # save the hash so changes can be identified in the original record
     if($FieldSettings.hash) {
@@ -481,10 +477,11 @@ function PackData {
             continue
         }
 
-        $recordsFolder = Get-Item -Path (Join-Path -Path $entityFolder -ChildPath 'records')
+        $recordsFolder = $entityFolder 
 
         # load all the xml files that represent each CRM record
         $recordFiles = Get-ChildItem -Path $recordsFolder -Filter '*.xml'
+        $recordFolders = Get-ChildItem -Path $recordsFolder -Attributes 'D' -exclude 'm2mrelationships' 
 
         # create the stub records element where each CRM record will be stored
         $recordsNode = $xml.ImportNode(([xml]"<records />").DocumentElement, $true)
@@ -496,15 +493,17 @@ function PackData {
         $entitySettings = LoadEntitySettings -Entity $entity -SettingsEntity $settingsEntity
 
         # read the record xml for each CRM record from disk, and add it to the records element
-        foreach($recordFile in $recordFiles) {
-            Write-Verbose "Loading file $($recordFile.FullName)"
+        foreach($recordFolder in $recordFolders) {
+            Write-Verbose "Processing record $($recordFolder.FullName)"
+
+            $recordFile = Get-Item -Path (Join-Path -Path $recordFolder.FullName -ChildPath "$($recordFolder.Name).xml")
             $recordData = [xml](Get-Content -Path $recordFile.FullName -Encoding UTF8)
 
             if($settingsEntity) {
                 foreach($field in $settingsEntity.fields) {
                     $fieldSettings = LoadFieldSettings -SettingsField $field
 
-                    LoadFileAndUpdateRecord -RecordsFolder $recordsFolder -Record $recordData.record -Entity $entity -FieldSettings $fieldSettings
+                    LoadFileAndUpdateRecord -RecordsFolder $recordFolder.FullName -Record $recordData.record -Entity $entity -FieldSettings $fieldSettings
                 }
             }
 
